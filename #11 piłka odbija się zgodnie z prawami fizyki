@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Gamedev Canvas Workshop</title>
+  <style>
+    * { padding: 0; margin: 0;}
+    canvas { background: #eee; display: block; margin:0 auto; }
+  </style>
+</head>
+<body>
+
+<canvas id="myCanvas" width="480" height="320"></canvas>
+
+
+<script>
+  //wnętrze gry
+  var canvas = document.getElementById("myCanvas");//znajduję canvas żeby javascript wiedziało o jego istnieniu
+  var ctx = canvas.getContext("2d");// ctx to cusiek rządzący dwuwymiarowymi ksztautami
+  var x = canvas.width/2;//początkowe x piłki
+  var y = canvas.height-30;//początkowe y piłki
+  var dx = -1;// iksowa prędkość piłki
+  var dy = -2;//igrekowa prędkość piłki
+  var ballRadius = 10;
+  var paddleHeight = 10;
+  var paddleWidth = 75;
+  var paddleX = (canvas.width - paddleWidth) / 2;
+  var rightPressed = false;// false = niewciśnięta prawa strzałka
+  var leftPressed = false;// false = niewciśnięta lewa strzałka
+  var spacePressed = false;
+  var brickRowCount = 3;
+  var brickColumnCount = 5;
+  var brickWidth = 75;
+  var brickHeight = 20;
+  var brickPadding = 10;//odstęp między cegłami
+  var brickOffsetTop = 30;//odstęp między cegłą a górną krawędzią canvas
+  var brickOffsetLeft = 30;//odstęp między cegłą a  lewą krawędzią Canvas
+  var score = 0;
+  var lives = 3;
+  var bricks = [];
+  var ballInBrickX = false;
+  var ballInBrickY = false;
+  for(var c=0; c<brickColumnCount; c++) {
+      bricks[c] = [];
+      for(var r=0; r<brickRowCount; r++) {
+          bricks[c][r] = { x: 0, y: 0, status: 1};
+      }
+  }
+  console.log(bricks);
+  document.addEventListener("keydown", keyDownHandler, false);  //klawisz jest wciśnięty = uruchomienie funkcji keyDownHandler()
+  document.addEventListener("keyup", keyUpHandler, false);
+  document.addEventListener("mousemove", mouseMoveHandler, false);
+
+  function mouseMoveHandler(e) {
+    var relativeX = e.clientX - canvas.offsetLeft;//ustawiam relativeX względem canvas a nie okna
+    if (relativeX > paddleWidth/2 && relativeX < canvas.width - paddleWidth/2 ) {
+      paddleX = relativeX - paddleWidth/2;
+
+    }
+  }
+
+function keyDownHandler(e) {//zmienia wartośćfunkcji klawiszowykrywających na true kiedy są wciśnięte
+    if(e.key == "Right" || e.key == "ArrowRight") {
+        rightPressed = true;
+    }
+  if(e.key == "Left" || e.key == "ArrowLeft") {
+        leftPressed = true;
+    }
+  if(e.key == "Space") {
+      spacePressed = true;
+      console.log("space");
+  }
+}
+
+
+function keyUpHandler(e) {//zmienia wartośćfunkcji klawiszowykrywających na false kiedy są niewciśnięte
+    if(e.key == "Right" || e.key == "ArrowRight") {
+        rightPressed = false;
+    }
+    else if(e.key == "Left" || e.key == "ArrowLeft") {
+        leftPressed = false;
+    }
+    else if(e.key == "Space") {
+        spacePressed = false;
+    }
+}
+//NAPRAW TO
+function collisionDetection() {
+  for (var c=0; c<brickColumnCount; c++) {
+    for (var r=0; r<brickRowCount; r++) {
+      var b = bricks[c][r];
+      if(b.status == 1) {
+        ballInBrickX = (x+ballRadius)>b.x && (x-ballRadius)<b.x + brickWidth;//sprawdzam czy x piłki jest gdzieś w x cegły
+        ballInBrickY = (y+ballRadius)>b.y && (y-ballRadius)<b.y + brickHeight;//sprawdzam czy y piłki jest gdzieś w y cegły;
+        if (ballInBrickX && ballInBrickY) {
+          dy = -dy;//zawracam
+          b.status = 0;//znikam cegłę
+          score++;
+          if (score == brickRowCount * brickColumnCount) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            alert("WYGRAŁEŚ!");
+            document.location.reload();
+            clearInterval(interval);//dla Chrome
+
+          }
+        }
+      }
+    }
+  }
+}
+
+function drawScore() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#0095DD";
+  ctx.fillText("Score: " + score, 8, 20);
+}
+
+function drawLives() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#0095DD";
+  ctx.fillText("Lives " + lives, canvas.width-65, 20);
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(x, y, ballRadius, 0, Math.PI*2);//tworzy niewidzialne koło
+    ctx.fillStyle = "#0095DD";//ustawia domyślny kolor kolorowania
+    ctx.fill();// koloruje niewidzialne koło żeby było je widać
+    ctx.closePath();
+}//koniec funkcji drawBall()
+
+function drawPaddle() {
+  ctx.beginPath();
+  ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+  ctx.fillStyle = "#0095DD";
+  ctx.fill();
+  ctx.closePath();
+}
+
+    function drawBricks() {
+      for(var c=0; c<brickColumnCount; c++) {
+        for(var r=0; r<brickRowCount; r++) {
+          if (bricks[c][r].status == 1){
+            var brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;//OBLICZA odpowiednio x cegły
+            var brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;//OBLICZA odpowiednio y
+            bricks[c][r].x = brickX;//USTAWIA x cegły na obliczoną wyżej wartość
+            bricks[c][r].y = brickY;//USTAWIA y cegły na obliczoną wyżej wartość
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#0095DD";
+            ctx.fill();
+            ctx.closePath();
+            var brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;//OBLICZA odpowiednio x cegły
+            var brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;//OBLICZA odpowiednio y
+            bricks[c][r].x = brickX;//USTAWIA x cegły na obliczoną wyżej wartość
+            bricks[c][r].y = brickY;//USTAWIA y cegły na obliczoną wyżej wartość
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#B3BBBD";
+            ctx.fill();
+            ctx.closePath();
+          }//koniec sprawdzacza statusu
+        }
+      }
+    }//koniec funkcji drawBricks
+
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // gumkuje całe canvas
+    drawBricks();
+    drawBall();
+    drawPaddle();
+    drawScore();
+    drawLives();
+    collisionDetection();
+    //jeśli piłka ZARAZ wleci w ścianę, to zawraca:
+    if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {// jeśli ZARAZ walnie w prawą albo lewą ścianę:
+      dx = -dx;
+    }
+
+
+    if (y + dy < ballRadius) {//jeśli dotyka sufitu
+      dy = -dy;
+    }
+    else if(y + dy > canvas.height - ballRadius) {//jeśli dotyka podłogi
+      if(x > paddleX && x < paddleX + paddleWidth) {//jeśli jest między lewym a prawym brzegiem paletki to żyjemy
+        dy = -dy;
+      }
+      else {
+        lives--;
+        if(!lives) {
+          window.cancelAnimationFrame(draw);
+          alert("GAME OVER");
+          document.location.reload();
+          clearInterval(interval); // Dla zakończenia gry w Chrome
+        }
+        else {
+          x = canvas.width/2;
+          y = canvas.height-30;
+          dx = 2;
+          dy = 2;
+          paddleX = (canvas.width-paddleWidth)/2;
+        }
+      }//koniec zakańczacza gry ,,GAME OVER"
+    }//koniec czujnika dotykania podłogi
+
+
+    //Odbijacz od ścian:
+    if(rightPressed) {
+      paddleX += 6;
+      if (paddleX + paddleWidth > canvas.width) {
+          paddleX = canvas.width - paddleWidth;//jeśli ZARAZ
+      }
+  }
+  else if(leftPressed) {
+      paddleX -= 6;
+      if (paddleX < 0){
+          paddleX = 0;
+      }
+  }
+    x += dx;
+    y += dy;
+    requestAnimationFrame(draw);
+  }//koniec funkcji draw
+  draw();
+
+</script>
+
+</body>
+</html>
